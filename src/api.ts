@@ -1,162 +1,148 @@
 import { AppDatabase, Department, Worker, DailyRecord, AppSettings } from './types';
 
-const API_BASE = '/api';
+const STORAGE_KEY = 'production_system_db';
+
+const defaultDb: AppDatabase = {
+  departments: [],
+  workers: [],
+  records: [],
+  settings: {
+    factoryName: 'نظام إدارة الإنتاج والعمال',
+    currency: 'جنيه',
+    allowMultipleRecordsPerDay: false
+  }
+};
+
+function getDb(): AppDatabase {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultDb));
+      return defaultDb;
+    }
+    return JSON.parse(data);
+  } catch {
+    return defaultDb;
+  }
+}
+
+function saveDb(db: AppDatabase): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
 
 export async function fetchDatabase(): Promise<AppDatabase> {
-  const res = await fetch(`${API_BASE}/data`);
-  if (!res.ok) {
-    throw new Error('تعذر تحميل البيانات من الخادم');
-  }
-  return res.json();
+  return getDb();
 }
 
 export async function saveSettings(settings: Partial<AppSettings>): Promise<{ success: boolean; settings: AppSettings }> {
-  const res = await fetch(`${API_BASE}/settings`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر حفظ الإعدادات');
-  }
-  return res.json();
+  const db = getDb();
+  db.settings = { ...db.settings, ...settings };
+  saveDb(db);
+  return { success: true, settings: db.settings };
 }
 
 // Departments
 export async function createDepartment(data: Omit<Department, 'id' | 'createdAt'>): Promise<Department> {
-  const res = await fetch(`${API_BASE}/departments`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر إضافة القسم');
-  }
-  return res.json();
+  const db = getDb();
+  const newDept: Department = {
+    ...data,
+    id: 'dept_' + Date.now(),
+    createdAt: new Date().toISOString()
+  };
+  db.departments.push(newDept);
+  saveDb(db);
+  return newDept;
 }
 
 export async function updateDepartment(id: string, data: Partial<Department>): Promise<Department> {
-  const res = await fetch(`${API_BASE}/departments/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر تعديل القسم');
-  }
-  return res.json();
+  const db = getDb();
+  const index = db.departments.findIndex(d => d.id === id);
+  if (index === -1) throw new Error('القسم غير موجود');
+  db.departments[index] = { ...db.departments[index], ...data };
+  saveDb(db);
+  return db.departments[index];
 }
 
 export async function deleteDepartment(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/departments/${id}`, {
-    method: 'DELETE'
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر حذف القسم');
-  }
+  const db = getDb();
+  db.departments = db.departments.filter(d => d.id !== id);
+  saveDb(db);
 }
 
 // Workers
 export async function createWorker(data: Omit<Worker, 'id' | 'createdAt'>): Promise<Worker> {
-  const res = await fetch(`${API_BASE}/workers`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر إضافة العامل');
-  }
-  return res.json();
+  const db = getDb();
+  const newWorker: Worker = {
+    ...data,
+    id: 'worker_' + Date.now(),
+    createdAt: new Date().toISOString()
+  };
+  db.workers.push(newWorker);
+  saveDb(db);
+  return newWorker;
 }
 
 export async function updateWorker(id: string, data: Partial<Worker>): Promise<Worker> {
-  const res = await fetch(`${API_BASE}/workers/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر تعديل بيانات العامل');
-  }
-  return res.json();
+  const db = getDb();
+  const index = db.workers.findIndex(w => w.id === id);
+  if (index === -1) throw new Error('العامل غير موجود');
+  db.workers[index] = { ...db.workers[index], ...data };
+  saveDb(db);
+  return db.workers[index];
 }
 
 export async function deleteWorker(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/workers/${id}`, {
-    method: 'DELETE'
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر حذف العامل');
-  }
+  const db = getDb();
+  db.workers = db.workers.filter(w => w.id !== id);
+  saveDb(db);
 }
 
 // Records
 export async function saveRecord(data: Partial<DailyRecord>): Promise<{ created?: boolean; updated?: boolean; record: DailyRecord }> {
-  const res = await fetch(`${API_BASE}/records`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر حفظ السجل اليومي');
+  const db = getDb();
+  const index = db.records.findIndex(r => r.id === data.id);
+
+  if (index !== -1) {
+    db.records[index] = { ...db.records[index], ...data } as DailyRecord;
+    saveDb(db);
+    return { updated: true, record: db.records[index] };
+  } else {
+    const newRecord: DailyRecord = {
+      ...(data as DailyRecord),
+      id: 'rec_' + Date.now(),
+      createdAt: new Date().toISOString()
+    };
+    db.records.push(newRecord);
+    saveDb(db);
+    return { created: true, record: newRecord };
   }
-  return res.json();
 }
 
 export async function updateRecord(id: string, data: Partial<DailyRecord>): Promise<DailyRecord> {
-  const res = await fetch(`${API_BASE}/records/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر تعديل السجل');
-  }
-  return res.json();
+  const db = getDb();
+  const index = db.records.findIndex(r => r.id === id);
+  if (index === -1) throw new Error('السجل غير موجود');
+  db.records[index] = { ...db.records[index], ...data };
+  saveDb(db);
+  return db.records[index];
 }
 
 export async function deleteRecord(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/records/${id}`, {
-    method: 'DELETE'
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر حذف السجل');
-  }
+  const db = getDb();
+  db.records = db.records.filter(r => r.id !== id);
+  saveDb(db);
 }
 
 // Backup & Reset
 export async function restoreBackup(backupData: any): Promise<AppDatabase> {
-  const res = await fetch(`${API_BASE}/backup/restore`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(backupData)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر استعادة النسخة الاحتياطية');
+  if (!backupData || !Array.isArray(backupData.departments)) {
+    throw new Error('ملف النسخة الاحتياطية غير صالح');
   }
-  const result = await res.json();
-  return result.data;
+  saveDb(backupData);
+  return backupData;
 }
 
 export async function resetDatabase(): Promise<AppDatabase> {
-  const res = await fetch(`${API_BASE}/reset`, {
-    method: 'POST'
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'تعذر إعادة ضبط قاعدة البيانات');
-  }
-  const result = await res.json();
-  return result.data;
+  saveDb(defaultDb);
+  return defaultDb;
 }

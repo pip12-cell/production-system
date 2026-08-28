@@ -1,0 +1,10 @@
+{
+  "departments": [],
+  "workers": [],
+  "records": [],
+  "settings": {
+    "factoryName": "نظام إدارة الإنتاج والعمال",
+    "currency": "جنيه",
+    "allowMultipleRecordsPerDay": false
+  }
+}

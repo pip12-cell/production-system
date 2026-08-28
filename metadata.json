@@ -1,0 +1,6 @@
+{
+  "name": "نظام إدارة إنتاج وحضور العمال",
+  "description": "تطبيق متكامل لإدارة إنتاج العمال بالأجر بالقطعة، الحضور والغياب، الخصومات والإضافي، والتقارير المالية والتصدير",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
